@@ -40,8 +40,8 @@ This brings _"silent payments"_ to Cashu: Proofs can be locked to a well known p
 
 **Note:** If the receiver public key (`P`) was Schnorr derived (eg: Nostr), calculate both standard and negated candidates and choose the one that generates the expected blinded public key, `P′`
 
-Standard derivation: `k = (p + rᵢ) mod n`
-Negated derivation: `k = (-p + rᵢ) mod n`
+- Standard derivation: `k = (p + rᵢ) mod n`
+- Negated derivation: `k = (-p + rᵢ) mod n`
 
 ## Proof Object Extension
 
@@ -101,13 +101,13 @@ This NUT extends the `PaymentRequest` object from [NUT-18][18] with an optional 
 }
 ```
 
-Where `nut26` indicates whether the receiver supports Pay-to-Blinded-Key and requests the sender to blind the receiver's public keys specified in the `nut10.d` field.
+Where `nut26` indicates whether the receiver supports Pay-to-Blinded-Key and requests the sender to blind the receiver's public keys specified in the `nut10.d` field, as well as any `pubkeys` and `refund` tags in the `nut10.t` field.
 
 ### Sender behavior
 
 When a payment request includes a P2PK locking condition in the `nut10` field with `nut26: true`, the sender SHOULD:
 
-1. Blind the receiver's public key(s) specified in the `nut10.d` field (and any keys in `nut10.t` pubkeys and refund tags) before minting/swapping
+1. Blind the receiver's public key(s) specified in the `nut10.d` field, as well as any `pubkeys` and `refund` tags in the `nut10.t` field, before minting/swapping
 2. Include the ephemeral public key `E` in the `p2pk_e` (`pe` for Token V4) field of the resulting proofs
 3. Send the P2BK-enhanced proofs to the receiver
 
