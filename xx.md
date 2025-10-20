@@ -64,11 +64,11 @@ Each proof adds a single new metadata field:
 ## Sender Workflow
 
 1. Generate a fresh random scalar `e` and compute `E = e·G`.
-2. For each receiver key `P`, compute:
-   > a. Slot index `i` in `[data, ...pubkeys, ...refund]` \
-   > b. `Zx = x(e·P)` \
-   > c. `rᵢ = H("Cashu_P2BK_v1" || Zx || keyset_id || i) mod n`\
-   > d. `P′ = P + rᵢ·G`
+2. For each receiver key `P`, compute: \
+   a. Slot index `i` in `[data, ...pubkeys, ...refund]` \
+   b. `Zx = x(e·P)` \
+   c. `rᵢ = H("Cashu_P2BK_v1" || Zx || keyset_id || i) mod n`\
+   d. `P′ = P + rᵢ·G`
 3. Build the canonical P2PK secret with the blinded `P′` keys in their slots.
 4. Interact with the mint normally; the mint never learns `P` or `rᵢ`.
 5. Include `p2pk_e = E` in the final proof.
