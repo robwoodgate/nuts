@@ -2,7 +2,7 @@
 
 `optional`
 
-`depends on: NUT-11`
+`depends on: NUT-11, NUT-18`
 
 ---
 
@@ -40,8 +40,8 @@ This brings _"silent payments"_ to Cashu: Proofs can be locked to a well known p
 
 **Note:** If the receiver public key (`P`) was Schnorr derived (eg: Nostr), calculate both standard and negated candidates and choose the one that generates the expected blinded public key, `P′`
 
-Standard derivation: `k = (p + r0) mod n`
-Negated derivation: `k = (-p + r0) mod n`
+Standard derivation: `k = (p + rᵢ) mod n`
+Negated derivation: `k = (-p + rᵢ) mod n`
 
 ## Proof Object Extension
 
