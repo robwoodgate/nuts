@@ -24,24 +24,24 @@ This brings _"silent payments"_ to Cashu: Proofs can be locked to a well known p
 
 ## Definitions
 
-- Curve: secp256k1, base point `G`, order `n`.
-- Receiver public key: `P`.
-- Receiver secret key: `p`.
-- Sender ephemeral keypair: `(e, E = e·G)` generated **per proof**.
-- Shared secret: `Zx = x(e·P) or x(p·E)` (32-byte x-coordinate).
+- Curve: secp256k1 (group noted as $\mathcal{G}$), base point $G$, order $n$.
+- Receivers public keys: $P_1, P_2, \ldots, P_{11}$.
+- Receivers secret keys: $p_1, p_2, \ldots, p_{11}$.
+- Sender ephemeral keypair: $(e, E = e\cdot G)$ generated **per proof**.
+- Shared secret: $Z_i = e\cdot P = p\cdot E$.
+- Taking the x-coordinate of a public key: $x: \mathcal{G} \rightarrow \{0, 1\}^{256}$.
 - Keyset identifier: `keyset_id` (mint-supplied).
-- Slot index: `i` (0–10). Represents the 11 pubkey limit in a P2PK proof, in the order: `[data, ...pubkeys, ...refund]`
 - Deterministic blinding scalar:
   ```
-  rᵢ = SHA-256( "Cashu_P2BK_v1" || Zx || keyset_id || i ) mod n
+  rᵢ = SHA-256( "Cashu_P2BK_v1" || x(Zᵢ) || keyset_id) mod n
   ```
-- Blinded public key: `P′ = P + rᵢ·G`.
-- Derived private key: `k = (p + rᵢ) mod n`
+- Blinded public key: $P'_i = P_i + rᵢ·G$.
+- Derived private key: $p'_i = (p_i + rᵢ) \bmod n$
 
 **Note:** If the receiver public key (`P`) was Schnorr derived (eg: Nostr), calculate both standard and negated candidates and choose the one that generates the expected blinded public key, `P′`
 
-- Standard derivation: `k = (p + rᵢ) mod n`
-- Negated derivation: `k = (-p + rᵢ) mod n`
+- Standard derivation: $p'_i = (p_i + r_i) \bmod n$
+- Negated derivation: $p'_i = (-p_i + r_i) \bmod n$
 
 ## Proof Object Extension
 
@@ -63,23 +63,23 @@ Each proof adds a single new metadata field:
 
 ## Sender Workflow
 
-1. Generate a fresh random scalar `e` and compute `E = e·G`.
-2. For each receiver key `P`, compute: \
-   a. Slot index `i` in `[data, ...pubkeys, ...refund]` \
-   b. `Zx = x(e·P)` \
-   c. `rᵢ = H("Cashu_P2BK_v1" || Zx || keyset_id || i) mod n`\
-   d. `P′ = P + rᵢ·G`
-3. Build the canonical P2PK secret with the blinded `P′` keys in their slots.
-4. Interact with the mint normally; the mint never learns `P` or `rᵢ`.
-5. Include `p2pk_e = E` in the final proof.
+1. Generate a fresh random scalar $e$ and compute $E = e\cdot G$.
+2. For each receiver key $P_i$ in `[data, ...pubkeys, ...refund]` compute: \
+   a. $Z_i = e\cdot P_i$ \
+   b. `rᵢ = SHA-256("Cashu_P2BK_v1" || Zᵢ || keyset_id) mod n`\
+   c. $P'_i = P_i + r_i\cdot G$
+3. Build the canonical P2PK secret with the blinded $P'_i$ keys in their slots.
+4. Interact with the mint normally; the mint never learns any of the $P'_i$ or $r_i$.
+5. Include $E$ in the final proof as a 66-char hex compressed SEC-1 key `p2pk_e`.
 
 ## Receiver Workflow
 
-1. Read `E` from `proof.p2pk_e`, `keyset_id` from `proof.id`, and the key slot order index `i` from `[data, ...pubkeys, ...refund]`.
-2. Compute `rᵢ = H("Cashu_P2BK_v1" || x(p·E) || keyset_id || i) mod n`.
-3. Derive `k = (p + rᵢ) mod n` (or parity-matched variant).
-4. Remove the `p2pk_e` field from the proof.
-5. Sign and spend the proof as an ordinary P2PK output.
+1. Read $E$ from `proof.p2pk_e`, `keyset_id` from `proof.id`, and the blinded public keys $P'_i$ from `[data, ...pubkeys, ...refund]`.
+2. Compute $Z_i = p_i\cdot E$
+3. Compute `rᵢ = SHA-256("Cashu_P2BK_v1" || x(Zᵢ) || keyset_id) mod n`.
+4. Derive $p'_i = (p + r_i) \bmod n$ (or parity-matched variant).
+5. Remove the `p2pk_e` field from the proof.
+6. Sign and spend the proof as an ordinary P2PK output.
 
 ## Payment request extension
 
@@ -147,7 +147,6 @@ In this example:
 - Hash function: SHA-256.
 - Concatenate raw bytes in the order shown.
 - `keyset_id` MUST be encoded exactly as provided by the mint.
-- `i` is a single unsigned byte (0–10).
 - If `rᵢ = 0`, retry once with an extra `0xff` byte appended to the hash input; abort if still zero.
 
 ## Security Considerations
@@ -161,6 +160,7 @@ In this example:
 
 - NUT-11 protocol is unchanged.
 - Mints see only pure NUT-11 Proofs. The new `p2pk_e` field in Proof is stripped before sending to the mint.
+- If a `Proof` is locked to multiple keys, different recipients never learn each other's blinding factors.
 - Wallets can verify ECDH derivation locally; no mint changes are required.
 - Wallets that do not yet support P2BK will not leak privacy by sending P2BK Proofs to the mint. The spend will simply fail.
 
@@ -175,8 +175,8 @@ She generates an ephemeral secret, `e`, with corresponding pubkey `E` and blinds
 ```
 keyset_id = '009a1f293253e41e'
 Zx = x(e·P) // shared secret
-r0 = SHA-256( "Cashu_P2BK_v1" || Zx || keyset_id || 0 ) mod n // deterministic `r`
-P′ = P + r0·G // blinded pubkey
+r = SHA-256( "Cashu_P2BK_v1" || Zx || keyset_id) mod n // deterministic `r`
+P′ = P + r·G // blinded pubkey
 ```
 
 The resulting proof:
@@ -202,16 +202,15 @@ Carol receives the Proof and can derive the blinded signing key `k` as follows:
 ```
 E = proof.p2pk_e
 p = Carol's private key
-slot = 0 (`data` field)
 keyset_id = '009a1f293253e41e'
 
 Zx = x(p·E) // shared secret
-r0 = SHA-256( "Cashu_P2BK_v1" || Zx || keyset_id || 0 ) mod n // deterministic `r`
-k = (p + r0) mod n
+r = SHA-256( "Cashu_P2BK_v1" || Zx || keyset_id) mod n // deterministic `r`
+p' = (p + r) mod n
 
-or, if her private key is a Schnorr x-only key, calculate both candidates below and choose the one that generates the blinded pubkey `P′`
-standard derivation: k = (p + r0) mod n
-negated derivation: k = (-p + r0) mod n
+or, if her private key is a Schnorr x-only key, calculate both candidates below and choose the one that generates the blinded pubkey P'
+standard derivation: p' = (p + r) mod n
+negated derivation: p' = (-p + r) mod n
 ```
 
 ## References
