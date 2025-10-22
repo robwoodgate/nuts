@@ -153,7 +153,7 @@ In this example:
 
 - **Mint privacy:** the mint never sees `P`, `E`, or `rᵢ`.
 - **Freshness:** each proof uses a new `e`; reuse leaks linkage.
-- **Replay safety:** `keyset_id` prevents cross-mint reuse, `i` slot binding ensures each `rᵢ` is unique.
+- **Replay safety:** `keyset_id` prevents cross-mint reuse.
 - **Infinity handling:** proofs yielding a point at infinity must be discarded.
 
 ## Compatibility
