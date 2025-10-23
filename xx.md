@@ -35,17 +35,15 @@ This brings _"silent payments"_ to Cashu: Proofs can be locked to a well known p
   ```
   rᵢ = SHA-256( "Cashu_P2BK_v1" || Zx || keyset_id || i ) mod n
   ```
+  > [!NOTE]
+  > The shared secret (`Zx`) is generated per receiver public key (`P`), making it the primary blinding factor. The slot index (`i`) adds additional uniqueness to ensure that if the same receiver public key appears more than once (eg: as a locking AND refund key), it is blinded uniquely. The `keyset_id` adds auxillary uniqueness between mints and epochs.
 - Blinded public key: `P' = P + rᵢ·G`
 - Derived private key: `k = (p + rᵢ) mod n`
-
-> [!NOTE]
-> If the receiver public key (`P`) was Schnorr derived (eg: Nostr), calculate both standard and negated candidates and choose the one that generates the expected blinded public key, `P'`
->
-> - Standard derivation: `k = (p + rᵢ) mod n`
-> - Negated derivation: `k = (-p + rᵢ) mod n`
-
-> [!NOTE]
-> The shared secret is generated per receiver public key (`P`), making it the primary blinding factor. The slot index adds additional uniqueness to ensure that if the same receiver public key appears more than once (eg: as a locking AND refund key), it is blinded uniquely.
+  > [!NOTE]
+  > If the receiver public key (`P`) was Schnorr derived (eg: Nostr), calculate both standard and negated candidates and choose the one that generates the expected blinded public key, `P'`
+  >
+  > - Standard derivation: `k = (p + rᵢ) mod n`
+  > - Negated derivation: `k = (-p + rᵢ) mod n`
 
 ## Proof Object Extension
 
