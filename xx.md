@@ -78,10 +78,10 @@ Each proof adds a single new metadata field:
 ## Receiver Workflow
 
 1. Read `E` from `proof.p2pk_e`, `keyset_id` from `proof.id`, and the key slot order index `i` from `[data, ...pubkeys, ...refund]`.
-2. Calculate your unique shared secret: `Zx = x(p·E)` \
+2. Calculate your unique shared secret: `Zx = x(p·E)`
 3. For each slot `i`, compute: \
    a. Blinding scalar: `rᵢ = H("Cashu_P2BK_v1" || Zx || keyset_id || i) mod n` \
-   b. Derived private key: `k = (p + rᵢ) mod n` (or parity-matched variant) \
+   b. Derived private key: `k = (p + rᵢ) mod n` (or parity-matched variant)
 4. Remove the `p2pk_e` field from the proof.
 5. Sign and spend the proof as an ordinary P2PK output.
 
