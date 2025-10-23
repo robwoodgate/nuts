@@ -28,7 +28,7 @@ This brings _"silent payments"_ to Cashu: Proofs can be locked to a well known p
 - Receiver public key: `P`.
 - Receiver secret key: `p`.
 - Sender ephemeral keypair: `(e, E = e·G)` generated **per proof**.
-- Shared secret: `Zx = x(e·P) or x(p·E)` (32-byte x-coordinate).
+- Shared secret: `Zx = x(e·P) or x(p·E)` (32-byte x-coordinate) **per receiver public key**
 - Keyset identifier: `keyset_id` (mint-supplied).
 - Slot index: `i` (0–10). Represents the 11 pubkey limit in a P2PK proof, in the order: `[data, ...pubkeys, ...refund]`
 - Deterministic blinding scalar:
@@ -64,20 +64,24 @@ Each proof adds a single new metadata field:
 ## Sender Workflow
 
 1. Generate a fresh random scalar `e` and compute `E = e·G`.
-2. For each receiver key `P`, compute: \
+2. For **each receiver key** `P`, compute: \
    a. Slot index `i` in `[data, ...pubkeys, ...refund]` \
-   b. `Zx = x(e·P)` \
-   c. `rᵢ = H("Cashu_P2BK_v1" || Zx || keyset_id || i) mod n`\
-   d. `P′ = P + rᵢ·G`
+   b. Unique shared secret for this key: `Zx = x(e·P)`\
+   c. Blinding scalar: `rᵢ = H("Cashu_P2BK_v1" || Zx || keyset_id || i) mod n`\
+   d. Blinded Public Key: `P′ = P + rᵢ·G`
 3. Build the canonical P2PK secret with the blinded `P′` keys in their slots.
 4. Interact with the mint normally; the mint never learns `P` or `rᵢ`.
 5. Include `p2pk_e = E` in the final proof.
 
+**Note:** The shared secret is unique to each receiver public key (`P`), making it the primary blinding factor. The slot index adds additional uniqueness to ensure that if the same receiver public key appears more than once (eg: as a locking AND refund key), it is blinded uniquely.
+
 ## Receiver Workflow
 
 1. Read `E` from `proof.p2pk_e`, `keyset_id` from `proof.id`, and the key slot order index `i` from `[data, ...pubkeys, ...refund]`.
-2. Compute `rᵢ = H("Cashu_P2BK_v1" || x(p·E) || keyset_id || i) mod n`.
-3. Derive `k = (p + rᵢ) mod n` (or parity-matched variant).
+2. Calculate your unique shared secret: `Zx = x(p·E)` \
+3. For each slot `i`, compute: \
+   a. Blinding scalar: `rᵢ = H("Cashu_P2BK_v1" || Zx || keyset_id || i) mod n` \
+   b. Derived private key: `k = (p + rᵢ) mod n` (or parity-matched variant) \
 4. Remove the `p2pk_e` field from the proof.
 5. Sign and spend the proof as an ordinary P2PK output.
 
