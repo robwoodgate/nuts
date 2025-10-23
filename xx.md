@@ -39,12 +39,13 @@ This brings _"silent payments"_ to Cashu: Proofs can be locked to a well known p
 - Derived private key: `k = (p + rᵢ) mod n`
 
 > [!NOTE]
-> The shared secret is unique to each receiver public key (`P`), making it the primary blinding factor. The slot index adds additional uniqueness to ensure that if the same receiver public key appears more than once (eg: as a locking AND refund key), it is blinded uniquely.
->
 > If the receiver public key (`P`) was Schnorr derived (eg: Nostr), calculate both standard and negated candidates and choose the one that generates the expected blinded public key, `P'`
 >
 > - Standard derivation: `k = (p + rᵢ) mod n`
 > - Negated derivation: `k = (-p + rᵢ) mod n`
+
+> [!NOTE]
+> The shared secret is generated per receiver public key (`P`), making it the primary blinding factor. The slot index adds additional uniqueness to ensure that if the same receiver public key appears more than once (eg: as a locking AND refund key), it is blinded uniquely.
 
 ## Proof Object Extension
 
@@ -68,8 +69,8 @@ Each proof adds a single new metadata field:
 
 1. Generate a fresh random scalar `e` and compute `E = e·G`
 2. For **each receiver key** `P`, compute: \
-   a. Slot index `i` in `[data, ...pubkeys, ...refund]` \
-   b. Unique shared secret for this key: `Zx = x(e·P)`\
+   a. Unique shared secret for this key: `Zx = x(e·P)` \
+   b. Slot index `i` in `[data, ...pubkeys, ...refund]` \
    c. Blinding scalar: `rᵢ = H("Cashu_P2BK_v1" || Zx || keyset_id || i) mod n`\
    d. Blinded Public Key: `P' = P + rᵢ·G`
 3. Build the canonical P2PK secret with the blinded `P'` keys in their slots.
@@ -88,6 +89,9 @@ Each proof adds a single new metadata field:
    b. Derived private key: `k = (p + rᵢ) mod n` (or parity-matched variant)
 4. Remove the `p2pk_e` field from the proof
 5. Sign with the derived private keys and spend as an ordinary P2PK proof
+
+> [!NOTE]
+> A receiver can only calculate their OWN shared secret (`pE`), because shared secrets are unique to a receiver's private key (`pE`) and the sender's ephemeral private key (`eP`).
 
 ## Payment request extension
 
