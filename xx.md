@@ -24,24 +24,27 @@ This brings _"silent payments"_ to Cashu: Proofs can be locked to a well known p
 
 ## Definitions
 
-- Curve: secp256k1, base point `G`, order `n`.
-- Receiver public key: `P`.
-- Receiver secret key: `p`.
-- Sender ephemeral keypair: `(e, E = e·G)` generated **per proof**.
-- Shared secret: `Zx = x(e·P) or x(p·E)` (32-byte x-coordinate) **per receiver public key**
-- Keyset identifier: `keyset_id` (mint-supplied).
+- Curve: secp256k1, base point `G`, order `n`
+- Receiver public key: `P`
+- Receiver secret key: `p`
+- Sender ephemeral keypair: `(e, E = e·G)` generated **per proof**
+- Shared secret: `Zx = x(e·P) or x(p·E)` (32-byte x-coordinate) **per receiver key**
+- Keyset identifier: `keyset_id` (mint-supplied)
 - Slot index: `i` (0–10). Represents the 11 pubkey limit in a P2PK proof, in the order: `[data, ...pubkeys, ...refund]`
 - Deterministic blinding scalar:
   ```
   rᵢ = SHA-256( "Cashu_P2BK_v1" || Zx || keyset_id || i ) mod n
   ```
-- Blinded public key: `P′ = P + rᵢ·G`.
+- Blinded public key: `P' = P + rᵢ·G`
 - Derived private key: `k = (p + rᵢ) mod n`
 
-**Note:** If the receiver public key (`P`) was Schnorr derived (eg: Nostr), calculate both standard and negated candidates and choose the one that generates the expected blinded public key, `P′`
-
-- Standard derivation: `k = (p + rᵢ) mod n`
-- Negated derivation: `k = (-p + rᵢ) mod n`
+> [!NOTE]
+> The shared secret is unique to each receiver public key (`P`), making it the primary blinding factor. The slot index adds additional uniqueness to ensure that if the same receiver public key appears more than once (eg: as a locking AND refund key), it is blinded uniquely.
+>
+> If the receiver public key (`P`) was Schnorr derived (eg: Nostr), calculate both standard and negated candidates and choose the one that generates the expected blinded public key, `P'`
+>
+> - Standard derivation: `k = (p + rᵢ) mod n`
+> - Negated derivation: `k = (-p + rᵢ) mod n`
 
 ## Proof Object Extension
 
@@ -57,33 +60,34 @@ Each proof adds a single new metadata field:
 }
 ```
 
-- `p2pk_e` contains the sender’s ephemeral pubkey (`E`) used for blinding.
-- All pubkeys inside the `"P2PK"` secret are the blinded forms `P′`.
-- The mint sees standard P2PK data and remains unaware of the blinding.
+- `p2pk_e` contains the sender's ephemeral pubkey (`E`) used for blinding
+- All pubkeys inside the `"P2PK"` secret are the blinded forms `P'`
+- The mint sees standard P2PK data and remains unaware of the blinding
 
 ## Sender Workflow
 
-1. Generate a fresh random scalar `e` and compute `E = e·G`.
+1. Generate a fresh random scalar `e` and compute `E = e·G`
 2. For **each receiver key** `P`, compute: \
    a. Slot index `i` in `[data, ...pubkeys, ...refund]` \
    b. Unique shared secret for this key: `Zx = x(e·P)`\
    c. Blinding scalar: `rᵢ = H("Cashu_P2BK_v1" || Zx || keyset_id || i) mod n`\
-   d. Blinded Public Key: `P′ = P + rᵢ·G`
-3. Build the canonical P2PK secret with the blinded `P′` keys in their slots.
-4. Interact with the mint normally; the mint never learns `P` or `rᵢ`.
-5. Include `p2pk_e = E` in the final proof.
+   d. Blinded Public Key: `P' = P + rᵢ·G`
+3. Build the canonical P2PK secret with the blinded `P'` keys in their slots.
+4. Interact with the mint normally; the mint never learns `P` or `rᵢ`
+5. Include `p2pk_e = E` in the final proof
 
-**Note:** The shared secret is unique to each receiver public key (`P`), making it the primary blinding factor. The slot index adds additional uniqueness to ensure that if the same receiver public key appears more than once (eg: as a locking AND refund key), it is blinded uniquely.
+> [!NOTE]
+> Reminder, the shared secret is unique to each receiver public key (`P`), making it the primary blinding factor. The slot index adds additional uniqueness to ensure that if the same receiver public key appears more than once (eg: as a locking AND refund key), it is blinded uniquely.
 
 ## Receiver Workflow
 
-1. Read `E` from `proof.p2pk_e`, `keyset_id` from `proof.id`, and the key slot order index `i` from `[data, ...pubkeys, ...refund]`.
+1. Read `E` from `proof.p2pk_e`, `keyset_id` from `proof.id`, and the key slot order index `i` from `[data, ...pubkeys, ...refund]`
 2. Calculate your unique shared secret: `Zx = x(p·E)`
 3. For each slot `i`, compute: \
    a. Blinding scalar: `rᵢ = H("Cashu_P2BK_v1" || Zx || keyset_id || i) mod n` \
    b. Derived private key: `k = (p + rᵢ) mod n` (or parity-matched variant)
-4. Remove the `p2pk_e` field from the proof.
-5. Sign and spend the proof as an ordinary P2PK output.
+4. Remove the `p2pk_e` field from the proof
+5. Sign with the derived private keys and spend as an ordinary P2PK proof
 
 ## Payment request extension
 
@@ -180,7 +184,7 @@ She generates an ephemeral secret, `e`, with corresponding pubkey `E` and blinds
 keyset_id = '009a1f293253e41e'
 Zx = x(e·P) // shared secret
 r0 = SHA-256( "Cashu_P2BK_v1" || Zx || keyset_id || 0 ) mod n // deterministic `r`
-P′ = P + r0·G // blinded pubkey
+P' = P + r0·G // blinded pubkey
 ```
 
 The resulting proof:
@@ -213,7 +217,7 @@ Zx = x(p·E) // shared secret
 r0 = SHA-256( "Cashu_P2BK_v1" || Zx || keyset_id || 0 ) mod n // deterministic `r`
 k = (p + r0) mod n
 
-or, if her private key is a Schnorr x-only key, calculate both candidates below and choose the one that generates the blinded pubkey `P′`
+or, if her private key is a Schnorr x-only key, calculate both candidates below and choose the one that generates the blinded pubkey `P'`
 standard derivation: k = (p + r0) mod n
 negated derivation: k = (-p + r0) mod n
 ```
