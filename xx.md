@@ -227,7 +227,7 @@ keyset_id = '009a1f293253e41e'
 
 Zx = x(p·E) // shared secret
 r0 = SHA-256( "Cashu_P2BK_v1" || Zx || keyset_id || 0 ) // deterministic `r`
-0 < r0 < N == true
+verify 0 < r0 < N
 k = (p + r0) mod n
 
 or, if her private key is a Schnorr x-only key, calculate both candidates below and choose the one that generates the blinded pubkey `P'`
