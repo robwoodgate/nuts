@@ -31,14 +31,15 @@ This brings _"silent payments"_ to Cashu: Proofs can be locked to a well known p
 - Shared secret: `Zx = x(e·P) or x(p·E)` (32-byte x-coordinate) **per receiver key**
 - Keyset identifier: `keyset_id` (mint-supplied)
 - Slot index: `i` (0–10). Represents the 11 pubkey limit in a P2PK proof, in the order: `[data, ...pubkeys, ...refund]`
-- Deterministic blinding scalar, obtained by either
+- Deterministic blinding scalar, obtained by either:
   ```
   rᵢ = SHA-256( "Cashu_P2BK_v1" || Zx || keyset_id || i )
   ```
-  or
+  or if the first calculation is out of range (`rᵢ = 0` or `rᵢ >= n`):
   ```
-  rᵢ = SHA-256( "Cashu_P2BK_v1" || Zx || keyset_id || i || 0xFF )
+  rᵢ = SHA-256( "Cashu_P2BK_v1" || Zx || keyset_id || i || 0xff )
   ```
+  Note: All inputs are in raw byte format. (See Determinism section).
 - Blinded public key: `P' = P + rᵢ·G`
 - Derived private key: `k = (p + rᵢ) mod n`
 
@@ -55,7 +56,7 @@ This brings _"silent payments"_ to Cashu: Proofs can be locked to a well known p
 
 Each proof adds a single new metadata field:
 
-```json
+```jsonc
 {
   "amount": int,
   "id": hex_str,
@@ -81,8 +82,11 @@ Each proof adds a single new metadata field:
 4. Interact with the mint normally; the mint never learns `P` or `rᵢ`
 5. Include `p2pk_e = E` in the final proof
 
-> [!NOTE]
-> Reminder, the shared secret is unique to each receiver public key (`P`), making it the primary blinding factor. The slot index adds additional uniqueness to ensure that if the same receiver public key appears more than once (eg: as a locking AND refund key), it is blinded uniquely.
+> [!IMPORTANT]
+> Use a fresh ephemeral keypair (`e` / `E`) for each new output, so that every proof has
+> unique blinded keys and a unique `E` in the `Proof.p2pk_e` field.
+> In the case of `SIG_ALL` proofs, the **SAME** ephemeral keypair **MUST** be used for all
+> outputs, as all proofs must have the SAME locking/refund keys.
 
 ## Receiver Workflow
 
@@ -161,7 +165,7 @@ In this example:
 ## Determinism and Canonicalisation
 
 - Hash function: SHA-256.
-- Concatenate raw bytes in the order shown.
+- Concatenate all hash inputs as raw bytes in the order shown.
 - `keyset_id` MUST be encoded exactly as provided by the mint.
 - `i` is a single unsigned byte (0–10).
 - If `rᵢ = 0` or `rᵢ >= n`, retry once with an extra `0xff` byte appended to the hash input; abort if still out of range.
@@ -180,23 +184,27 @@ In this example:
 - Wallets can verify ECDH derivation locally; no mint changes are required.
 - Wallets that do not yet support P2BK will not leak privacy by sending P2BK Proofs to the mint. The spend will simply fail.
 
-## Example
+## Worked Example
 
 Alice want's to create a 64 sat Proof at Bob's Mint, keyset `009a1f293253e41e`, locked to Carol's public key:
 
-`P: 021405b887592231816f01ba57d12ae6a37588fccbdc3050e069ac6e9e17963abf`
+`P: 0295fe407d92879a4669447ac92b1e67346b02c813ad4274bab2cbae2c278cea9e`
 
 She generates an ephemeral secret, `e`, with corresponding pubkey `E` and blinds Carol's pubkey `P` for insertion into the `data` tag (slot `0`) as follows:
 
 ```
+e = f90a8c8ac22a79893624ae3dcf3a19b75e07e4208454704ebefd4656d172a049 // as hex
+E = 0266a67d690652afd786d68467972aab2828f8b4f99ac487e6894b35291f4861c2
 keyset_id = '009a1f293253e41e'
 Zx = x(e·P) // shared secret
 r0 = SHA-256( "Cashu_P2BK_v1" || Zx || keyset_id || 0 ) // deterministic `r`
 if r0 == 0 or r0 >= n:
-  r0 = SHA-256( "Cashu_P2BK_v1" || Zx || keyset_id || 0 || 255)
+  r0 = SHA-256( "Cashu_P2BK_v1" || Zx || keyset_id || 0 || 0xff )
   if r0 == 0 or r0 >= n:
     abort
+r0 = 9af8ad5cc63103205bd64c85b392652938292c0b0d680e94a716004d4ff65392 // as hex
 P' = P + r0·G // blinded pubkey
+P' = 02b7715870996f2081b6237092c055ad65e0278162541a158c5f9c1dc39ea1b63f
 ```
 
 The resulting proof:
@@ -204,16 +212,15 @@ The resulting proof:
 ```json
 {
   "amount": 64,
-  "C": "03b6512524f9f2fc1fc2b1c1fa68ac3c037bb7a6070dea780af39a2186b8d417b3",
+  "C": "0382ff1303eeae4fc31ff1c70f062100ab472dc0a1c2109b86b601d2414993ba3a",
   "id": "009a1f293253e41e",
-  "secret": "[\"P2PK\",{\"nonce\":\"fa5f4310eacc45d8b67daf6887a1994d661127ddad35e5a19eaa2df2d9123d4f\",\"data\":\"02c736ee0610ccfa8702c83f36a829b8b79aaa54f28617aa1bb6b45fb571fa3690\",\"tags\":[]}]",
-  "witness": undefined,
+  "secret": "[\"P2PK\",{\"nonce\":\"7ea27e133e9343f77a7ff59644ad7283b568ae165978f454e4e69349e623e86d\",\"data\":\"02b7715870996f2081b6237092c055ad65e0278162541a158c5f9c1dc39ea1b63f\",\"tags\":[]}]",
   "dleq": {
-    "s": "e2d068d139debea907e28cdc70caf00230019e7c7c2f82c5dccf36b89622dfa9",
-    "e": "c6da3bf95534789037ff2c67453027739c9fd7b5efb9b2e071758f400ba7ba78",
-    "r": "d87a5db3a1e45d28cebb9cfa7fb2269f151efd82ad053a5e5979d1d70a55d76a"
+    "s": "cb1171364c499fdff68538532a7bb52fe8eca021eebd87d8e09f4d8705e743ab",
+    "e": "97494ca0dc28416d036741c8b3a8ac5274230de0ca6dbd4dee6090b3510ef216",
+    "r": "942b9063b4a8e9c688ce76c7074ac7fb6d5aa6a02c2710404a4a7338b7fbc752"
   },
-  "p2pk_e": "0267720bc602b2a9939ea0b00d77cac1401d8032009603497bb64afd5023ab59f8"
+  "p2pk_e": "0266a67d690652afd786d68467972aab2828f8b4f99ac487e6894b35291f4861c2"
 }
 ```
 
@@ -221,21 +228,26 @@ Carol receives the Proof and can derive the blinded signing key `k` as follows:
 
 ```
 E = proof.p2pk_e
-p = Carol's private key
+p = 495826c59e1d9d8c2f7a652a2ed02ab71b0f5f2f5cae9bf30a395597760f12c6 (Carol's private key)
 slot = 0 (`data` field)
 keyset_id = '009a1f293253e41e'
 
 Zx = x(p·E) // shared secret
 r0 = SHA-256( "Cashu_P2BK_v1" || Zx || keyset_id || 0 ) // deterministic `r`
-verify 0 < r0 < N
+if r0 == 0 or r0 >= n:
+  r0 = SHA-256( "Cashu_P2BK_v1" || Zx || keyset_id || 0 || 0xff )
+  if r0 == 0 or r0 >= n:
+    abort
+r0 = 9af8ad5cc63103205bd64c85b392652938292c0b0d680e94a716004d4ff65392 // as hex
 k = (p + r0) mod n
+k = 241304eb045c0286af32176e153720627e3b11f4e420848193f9f80781311627
 
 or, if her private key is a Schnorr x-only key, calculate both candidates below and choose the one that generates the blinded pubkey `P'`
 standard derivation: k = (p + r0) mod n
 negated derivation: k = (-p + r0) mod n
+std: 241304eb045c0286af32176e153720627e3b11f4e420848193f9f80781311627
+neg: 11de55ce880603ba087a819d51eda9f13768693a8766f86bfa5faa064e854fbc
 ```
-
-## References
 
 [11]: 11.md
 [18]: 18.md
