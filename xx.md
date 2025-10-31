@@ -35,7 +35,7 @@ This brings _"silent payments"_ to Cashu: Proofs can be locked to a well known p
   ```
   rᵢ = SHA-256( "Cashu_P2BK_v1" || Zx || keyset_id || i )
   ```
-  or 
+  or
   ```
   rᵢ = SHA-256( "Cashu_P2BK_v1" || Zx || keyset_id || i || 0xFF )
   ```
