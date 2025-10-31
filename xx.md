@@ -31,9 +31,13 @@ This brings _"silent payments"_ to Cashu: Proofs can be locked to a well known p
 - Shared secret: `Zx = x(e·P) or x(p·E)` (32-byte x-coordinate) **per receiver key**
 - Keyset identifier: `keyset_id` (mint-supplied)
 - Slot index: `i` (0–10). Represents the 11 pubkey limit in a P2PK proof, in the order: `[data, ...pubkeys, ...refund]`
-- Deterministic blinding scalar:
+- Deterministic blinding scalar, obtained by either
   ```
-  rᵢ = SHA-256( "Cashu_P2BK_v1" || Zx || keyset_id || i ) mod n
+  rᵢ = SHA-256( "Cashu_P2BK_v1" || Zx || keyset_id || i )
+  ```
+  or 
+  ```
+  rᵢ = SHA-256( "Cashu_P2BK_v1" || Zx || keyset_id || i || 0xFF )
   ```
 - Blinded public key: `P' = P + rᵢ·G`
 - Derived private key: `k = (p + rᵢ) mod n`
@@ -71,7 +75,7 @@ Each proof adds a single new metadata field:
 2. For **each receiver key** `P`, compute: \
    a. Unique shared secret for this key: `Zx = x(e·P)` \
    b. Slot index `i` in `[data, ...pubkeys, ...refund]` \
-   c. Blinding scalar: `rᵢ = H("Cashu_P2BK_v1" || Zx || keyset_id || i) mod n`\
+   c. Blinding scalar: `rᵢ = H("Cashu_P2BK_v1" || Zx || keyset_id || i)`\
    d. Blinded Public Key: `P' = P + rᵢ·G`
 3. Build the canonical P2PK secret with the blinded `P'` keys in their slots.
 4. Interact with the mint normally; the mint never learns `P` or `rᵢ`
@@ -85,7 +89,7 @@ Each proof adds a single new metadata field:
 1. Read `E` from `proof.p2pk_e`, `keyset_id` from `proof.id`, and the key slot order index `i` from `[data, ...pubkeys, ...refund]`
 2. Calculate your unique shared secret: `Zx = x(p·E)`
 3. For each slot `i`, compute: \
-   a. Blinding scalar: `rᵢ = H("Cashu_P2BK_v1" || Zx || keyset_id || i) mod n` \
+   a. Blinding scalar: `rᵢ = H("Cashu_P2BK_v1" || Zx || keyset_id || i)` \
    b. Derived private key: `k = (p + rᵢ) mod n` (or parity-matched variant)
 4. Remove the `p2pk_e` field from the proof
 5. Sign with the derived private keys and spend as an ordinary P2PK proof
@@ -160,7 +164,7 @@ In this example:
 - Concatenate raw bytes in the order shown.
 - `keyset_id` MUST be encoded exactly as provided by the mint.
 - `i` is a single unsigned byte (0–10).
-- If `rᵢ = 0`, retry once with an extra `0xff` byte appended to the hash input; abort if still zero.
+- If `rᵢ = 0` or `rᵢ >= n`, retry once with an extra `0xff` byte appended to the hash input; abort if still out of range.
 
 ## Security Considerations
 
@@ -187,7 +191,11 @@ She generates an ephemeral secret, `e`, with corresponding pubkey `E` and blinds
 ```
 keyset_id = '009a1f293253e41e'
 Zx = x(e·P) // shared secret
-r0 = SHA-256( "Cashu_P2BK_v1" || Zx || keyset_id || 0 ) mod n // deterministic `r`
+r0 = SHA-256( "Cashu_P2BK_v1" || Zx || keyset_id || 0 ) // deterministic `r`
+if r0 == 0 or r0 >= n:
+  r0 = SHA-256( "Cashu_P2BK_v1" || Zx || keyset_id || 0 || 255)
+  if r0 == 0 or r0 >= n:
+    abort
 P' = P + r0·G // blinded pubkey
 ```
 
@@ -218,7 +226,8 @@ slot = 0 (`data` field)
 keyset_id = '009a1f293253e41e'
 
 Zx = x(p·E) // shared secret
-r0 = SHA-256( "Cashu_P2BK_v1" || Zx || keyset_id || 0 ) mod n // deterministic `r`
+r0 = SHA-256( "Cashu_P2BK_v1" || Zx || keyset_id || 0 ) // deterministic `r`
+0 < r0 < N == true
 k = (p + r0) mod n
 
 or, if her private key is a Schnorr x-only key, calculate both candidates below and choose the one that generates the blinded pubkey `P'`
