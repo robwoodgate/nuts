@@ -39,7 +39,7 @@ This brings _"silent payments"_ to Cashu: Proofs can be locked to a well known p
   ```
   rᵢ = SHA-256( "Cashu_P2BK_v1" || Zx || keyset_id || i || 0xff )
   ```
-  Note: All inputs are in raw byte format. (See Determinism section).
+  **Note:** All hash inputs must be raw byte format. (See [Determinism](#determinism-and-canonicalisation) section).
 - Blinded public key: `P' = P + rᵢ·G`
 - Derived private key: `k = (p + rᵢ) mod n`
 
