@@ -57,10 +57,10 @@ This brings _"silent payments"_ to Cashu: Proofs can be locked to a well known p
 >    a. compute `Rᵢ = rᵢ·G` \
 >    a. unblind `P = P' − Rᵢ` \
 >    c. verify `x(P) == x(p·G)` \
->    d. use `k = (p + rᵢ) mod n` if `parity(P) == parity(p·G)`, otherwise `k = (-p + rᵢ) mod n` \
+>    d. use `k = (p + rᵢ) mod n` if `parity(P) == parity(p·G)`, otherwise `k = (-p + rᵢ) mod n`
 > 2. **Double-derive and match:** \
 >    a. derive both candidates `k₀ = (p + rᵢ) mod n` and `k₁ = (-p + rᵢ) mod n` \
->    b. select the one whose public key reconstructs `P'` \
+>    b. select the one whose public key reconstructs `P'`
 >
 > The first approach avoids an extra scalar multiplication per slot, so is recommended.
 
