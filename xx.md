@@ -46,7 +46,7 @@ This brings _"silent payments"_ to Cashu: Proofs can be locked to a well known p
 > [!NOTE]
 > The shared secret (`Zx`) is generated per receiver public key (`P`), making it the primary blinding factor. The slot index (`i`) adds additional uniqueness to ensure that if the same receiver public key appears more than once (eg: as a locking AND refund key), it is blinded uniquely. The `keyset_id` adds auxiliary uniqueness between mints and epochs.
 
-> [!IMPORTANT] Handling BIP-340 pubkeys (eg Nostr)
+> [!IMPORTANT]
 > When the receiver publishes a BIP-340 x-only public key (eg Nostr), an even-Y lift is implied.
 > **Sender MUST add the '02' prefix** (`02||x`) to convert it to Cashu's SEC1 compressed format.
 > On the receiver side, the wallet’s stored secret (`p`) may produce either parity under `p·G`.
