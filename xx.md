@@ -29,7 +29,7 @@ This brings _"silent payments"_ to Cashu: Proofs can be locked to a well known p
 - Receiver secret key: `p`
 - Sender ephemeral keypair: `(e, E = e·G)` generated **per proof**
 - Shared secret: `Zx = x(e·P) or x(p·E)` (32-byte x-coordinate) **per receiver key**
-- Keyset identifier: `keyset_id` (mint-supplied)
+- Keyset identifier: `keyset_id` (mint-supplied), hex-decoded to raw bytes before hashing
 - Slot index: `i` (0–10). Represents the 11 pubkey limit in a P2PK proof, in the order: `[data, ...pubkeys, ...refund]`
 - Deterministic blinding scalar, obtained by either:
   ```
@@ -182,7 +182,7 @@ In this example:
 
 - Hash function: SHA-256.
 - Concatenate all hash inputs as raw bytes in the order shown.
-- `keyset_id` MUST be encoded exactly as provided by the mint.
+- `keyset_id` The ASCII hex string from the mint MUST be hex-decoded to raw bytes.
 - `i` is a single unsigned byte (0–10).
 - If `rᵢ = 0` or `rᵢ >= n`, retry once with an extra `0xff` byte appended to the hash input; abort if still out of range.
 - All receiver keys **MUST** be in compressed SEC1 format (33 bytes) before ECDH and blinding. The sender **MUST add an '02' prefix** to BIP-340 x only pubkeys (eg Nostr).
