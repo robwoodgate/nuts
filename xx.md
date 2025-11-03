@@ -44,13 +44,19 @@ This brings _"silent payments"_ to Cashu: Proofs can be locked to a well known p
 - Derived private key: `k = (p + rᵢ) mod n`
 
 > [!NOTE]
-> The shared secret (`Zx`) is generated per receiver public key (`P`), making it the primary blinding factor. The slot index (`i`) adds additional uniqueness to ensure that if the same receiver public key appears more than once (eg: as a locking AND refund key), it is blinded uniquely. The `keyset_id` adds auxillary uniqueness between mints and epochs.
+> The shared secret (`Zx`) is generated per receiver public key (`P`), making it the primary blinding factor. The slot index (`i`) adds additional uniqueness to ensure that if the same receiver public key appears more than once (eg: as a locking AND refund key), it is blinded uniquely. The `keyset_id` adds auxiliary uniqueness between mints and epochs.
 
-> [!IMPORTANT]
-> If the receiver public key (`P`) was Schnorr derived (eg: Nostr), derive both standard and negated private key candidates and choose the one that generates the expected blinded public key, `P'`
+> [!IMPORTANT] Handling BIP-340 pubkeys (eg Nostr)
+> When the receiver publishes a BIP-340 x-only public key (eg Nostr), an even-Y lift is implied.
+> **Sender MUST add the '02' prefix** (`02||x`) to convert it to Cashu's SEC1 compressed format.
+> On the receiver side, the wallet’s stored secret (`p`) may produce either parity under `p·G`.
+> Implementations **MUST** resolve this BIP-340 sign ambiguity so the derived `k` corresponds
+> to the even-Y lift. Two interoperable strategies are allowed:
 >
-> - Standard derivation: `k = (p + rᵢ) mod n`
-> - Negated derivation: `k = (-p + rᵢ) mod n`
+> 1. **Unblind, then select by parity (RECOMMENDED):** compute `Rᵢ = rᵢ·G`, unblind `P = P' − Rᵢ`, verify `x(P) == x(p·G)`, then choose `k = (p + rᵢ) mod n` if `parity(P) == parity(p·G)`, otherwise `k = (-p + rᵢ) mod n`.
+> 2. **Double-derive and match:** derive both candidates `k₀ = (p + rᵢ) mod n` and `k₁ = (-p + rᵢ) mod n`, and select the one whose public key reconstructs `P'`.
+>
+> The first approach avoids an extra scalar multiplication per slot, so is recommended.
 
 ## Proof Object Extension
 
@@ -94,7 +100,11 @@ Each proof adds a single new metadata field:
 2. Calculate your unique shared secret: `Zx = x(p·E)`
 3. For each slot `i`, compute: \
    a. Blinding scalar: `rᵢ = H("Cashu_P2BK_v1" || Zx || keyset_id || i)` \
-   b. Derived private key: `k = (p + rᵢ) mod n` (or parity-matched variant)
+   b. Compute `Rᵢ = rᵢ·G`, and unblind `P = P' − Rᵢ` \
+   c. Verify `P` is on curve, not infinity, and that `x(P) == x(p·G)`. If it does not match, this `P'` is not for this private key, skip it. \
+   d. Resolve the BIP-340 sign and derive the secret key: either \
+    • select by parity as in the **Unblind, then select by parity** method, or \
+    • derive both candidates and pick the one that reconstructs `P'`
 4. Remove the `p2pk_e` field from the proof
 5. Sign with the derived private keys and spend as an ordinary P2PK proof
 
@@ -169,6 +179,7 @@ In this example:
 - `keyset_id` MUST be encoded exactly as provided by the mint.
 - `i` is a single unsigned byte (0–10).
 - If `rᵢ = 0` or `rᵢ >= n`, retry once with an extra `0xff` byte appended to the hash input; abort if still out of range.
+- All receiver keys **MUST** be in compressed SEC1 format (33 bytes) before ECDH and blinding. The sender **MUST add an '02' prefix** to BIP-340 x only pubkeys (eg Nostr).
 
 ## Security Considerations
 
@@ -176,6 +187,10 @@ In this example:
 - **Freshness:** each proof uses a new `e`; reuse leaks linkage.
 - **Replay safety:** `keyset_id` prevents cross-mint reuse, `i` slot binding ensures each `rᵢ` is unique.
 - **Infinity handling:** proofs yielding a point at infinity must be discarded.
+- **Input validation:** receivers **MUST** validate that `P'` decodes to an on-curve, non-infinite point before unblinding, and **SHOULD** verify the unblinding relation `P' = P + rᵢ·G`.
+- **Timing behaviour:** implementations SHOULD use constant-time comparisons where practical. Scalar-side candidate computation is cheap; prefer constant-structure selection at the end.
+- **Multi-key tolerance:** in multi-signature or multi-key proofs, receivers **MAY** skip non-matching `P'` for a given private key without error, and proceed to sign any slots that do match.
+- **Caching:** wallets MAY precompute and cache `p·G` and its parity per receiver key to avoid repeated multiplications during spends, without affecting security.
 
 ## Compatibility
 
@@ -186,7 +201,7 @@ In this example:
 
 ## Worked Example
 
-Alice want's to create a 64 sat Proof at Bob's Mint, keyset `009a1f293253e41e`, locked to Carol's public key:
+Alice wants to create a 64 sat Proof at Bob's Mint, keyset `009a1f293253e41e`, locked to Carol's public key:
 
 `P: 0295fe407d92879a4669447ac92b1e67346b02c813ad4274bab2cbae2c278cea9e`
 
