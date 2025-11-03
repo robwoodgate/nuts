@@ -53,8 +53,14 @@ This brings _"silent payments"_ to Cashu: Proofs can be locked to a well known p
 > Implementations **MUST** resolve this BIP-340 sign ambiguity so the derived `k` corresponds
 > to the even-Y lift. Two interoperable strategies are allowed:
 >
-> 1. **Unblind, then select by parity (RECOMMENDED):** compute `Rᵢ = rᵢ·G`, unblind `P = P' − Rᵢ`, verify `x(P) == x(p·G)`, then choose `k = (p + rᵢ) mod n` if `parity(P) == parity(p·G)`, otherwise `k = (-p + rᵢ) mod n`.
-> 2. **Double-derive and match:** derive both candidates `k₀ = (p + rᵢ) mod n` and `k₁ = (-p + rᵢ) mod n`, and select the one whose public key reconstructs `P'`.
+> 1. **Unblind, then select by parity (RECOMMENDED):** \
+>    a. compute `Rᵢ = rᵢ·G` \
+>    a. unblind `P = P' − Rᵢ` \
+>    c. verify `x(P) == x(p·G)` \
+>    d. use `k = (p + rᵢ) mod n` if `parity(P) == parity(p·G)`, otherwise `k = (-p + rᵢ) mod n` \
+> 2. **Double-derive and match:** \
+>    a. derive both candidates `k₀ = (p + rᵢ) mod n` and `k₁ = (-p + rᵢ) mod n` \
+>    b. select the one whose public key reconstructs `P'` \
 >
 > The first approach avoids an extra scalar multiplication per slot, so is recommended.
 
