@@ -209,13 +209,13 @@ In this example:
 
 Alice wants to create a 64 sat Proof at Bob's Mint, keyset `009a1f293253e41e`, locked to Carol's public key:
 
-`P: 0295fe407d92879a4669447ac92b1e67346b02c813ad4274bab2cbae2c278cea9e`
+`P: 02771fed6cb88aaac38b8b32104a942bf4b8f4696bc361171b3c7d06fa2ebddf06`
 
 She generates an ephemeral secret, `e`, with corresponding pubkey `E` and blinds Carol's pubkey `P` for insertion into the `data` tag (slot `0`) as follows:
 
 ```
-e = f90a8c8ac22a79893624ae3dcf3a19b75e07e4208454704ebefd4656d172a049 // as hex
-E = 0266a67d690652afd786d68467972aab2828f8b4f99ac487e6894b35291f4861c2
+e = 1cedb9df0c6872188b560ace9e35fd55c2532d53e19ae65b46159073886482ca // as hex
+E = 02a8cda4cf448bfce9a9e46e588c06ea1780fcb94e3bbdf3277f42995d403a8b0c
 keyset_id = '009a1f293253e41e'
 Zx = x(e·P) // shared secret
 r0 = SHA-256( "Cashu_P2BK_v1" || Zx || keyset_id || 0 ) // deterministic `r`
@@ -223,9 +223,9 @@ if r0 == 0 or r0 >= n:
   r0 = SHA-256( "Cashu_P2BK_v1" || Zx || keyset_id || 0 || 0xff )
   if r0 == 0 or r0 >= n:
     abort
-r0 = 9af8ad5cc63103205bd64c85b392652938292c0b0d680e94a716004d4ff65392 // as hex
+r0 = 41b5f15975f787bd5bd8d91753cbbe56d0d7aface851b1063e8011f68551862d // as hex
 P' = P + r0·G // blinded pubkey
-P' = 02b7715870996f2081b6237092c055ad65e0278162541a158c5f9c1dc39ea1b63f
+P' = 03f221b62aa21ee45982d14505de2b582716ae95c265168f586dc547f0ea8f135f
 ```
 
 The resulting proof:
@@ -233,15 +233,15 @@ The resulting proof:
 ```json
 {
   "amount": 64,
-  "C": "0382ff1303eeae4fc31ff1c70f062100ab472dc0a1c2109b86b601d2414993ba3a",
+  "C": "0381855ddcc434a9a90b3564f29ef78e7271f8544d0056763b418b00e88525c0ff",
   "id": "009a1f293253e41e",
-  "secret": "[\"P2PK\",{\"nonce\":\"7ea27e133e9343f77a7ff59644ad7283b568ae165978f454e4e69349e623e86d\",\"data\":\"02b7715870996f2081b6237092c055ad65e0278162541a158c5f9c1dc39ea1b63f\",\"tags\":[]}]",
+  "secret": "[\"P2PK\",{\"nonce\":\"d4a17a88f5d0c09001f7b453c42c1f9d5a87363b1f6637a5a83fc31a6a3b7266\",\"data\":\"03f221b62aa21ee45982d14505de2b582716ae95c265168f586dc547f0ea8f135f\",\"tags\":[]}]",
   "dleq": {
-    "s": "cb1171364c499fdff68538532a7bb52fe8eca021eebd87d8e09f4d8705e743ab",
-    "e": "97494ca0dc28416d036741c8b3a8ac5274230de0ca6dbd4dee6090b3510ef216",
-    "r": "942b9063b4a8e9c688ce76c7074ac7fb6d5aa6a02c2710404a4a7338b7fbc752"
+    "s": "6178978456c42eee8eefb50830fc3146be27b05619f04e3490dc596005f0cc78",
+    "e": "23f2190b18bfd043d3a526103e15f4a938d646a6bf93b017e2bb7c85e1540b32",
+    "r": "d26a55aa39ca50957fdaf54036b01053b0de42048b96a6fb2a167e03f00d0a0f"
   },
-  "p2pk_e": "0266a67d690652afd786d68467972aab2828f8b4f99ac487e6894b35291f4861c2"
+  "p2pk_e": "02a8cda4cf448bfce9a9e46e588c06ea1780fcb94e3bbdf3277f42995d403a8b0c"
 }
 ```
 
@@ -249,7 +249,7 @@ Carol receives the Proof and can derive the blinded signing key `k` as follows:
 
 ```
 E = proof.p2pk_e
-p = 495826c59e1d9d8c2f7a652a2ed02ab71b0f5f2f5cae9bf30a395597760f12c6 (Carol's private key)
+p = ad37e8abd800be3e8272b14045873f4353327eedeb702b72ddcc5c5adff5129c (Carol's private key)
 slot = 0 (`data` field)
 keyset_id = '009a1f293253e41e'
 
@@ -259,15 +259,20 @@ if r0 == 0 or r0 >= n:
   r0 = SHA-256( "Cashu_P2BK_v1" || Zx || keyset_id || 0 || 0xff )
   if r0 == 0 or r0 >= n:
     abort
-r0 = 9af8ad5cc63103205bd64c85b392652938292c0b0d680e94a716004d4ff65392 // as hex
-k = (p + r0) mod n
-k = 241304eb045c0286af32176e153720627e3b11f4e420848193f9f80781311627
+r0 = 41b5f15975f787bd5bd8d91753cbbe56d0d7aface851b1063e8011f68551862d // as hex
+// Standard derivation
+sk1 = (p + r0) mod n
+sk1 = eeedda054df845fbde4b8a579952fd9a240a2e9ad3c1dc791c4c6e51654698c9
+// Negated derivation
+sk2 = k = (-p + r0) mod n
+sk2 = 947e08ad9df6c97ed96627d70e447f1238540da5ac2a25cf208614287592b4d2
+// Expected pubkey = p·G
+Expected pubkey = '03771fed6cb88aaac38b8b32104a942bf4b8f4696bc361171b3c7d06fa2ebddf06'
+Actual Pubkey = '02771fed6cb88aaac38b8b32104a942bf4b8f4696bc361171b3c7d06fa2ebddf06'
+// The pubkey is correct, as x-matches, but y-parity is wrong...
+// So we use the negated derivation:
+Derived private key = 947e08ad9df6c97ed96627d70e447f1238540da5ac2a25cf208614287592b4d2
 
-or, if her private key is a Schnorr x-only key, calculate both candidates below and choose the one that generates the blinded pubkey `P'`
-standard derivation: k = (p + r0) mod n
-negated derivation: k = (-p + r0) mod n
-std: 241304eb045c0286af32176e153720627e3b11f4e420848193f9f80781311627
-neg: 11de55ce880603ba087a819d51eda9f13768693a8766f86bfa5faa064e854fbc
 ```
 
 [11]: 11.md
