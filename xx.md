@@ -260,17 +260,19 @@ if r0 == 0 or r0 >= n:
   if r0 == 0 or r0 >= n:
     abort
 r0 = 41b5f15975f787bd5bd8d91753cbbe56d0d7aface851b1063e8011f68551862d // as hex
+
 // Standard derivation
 sk1 = (p + r0) mod n
 sk1 = eeedda054df845fbde4b8a579952fd9a240a2e9ad3c1dc791c4c6e51654698c9
 // Negated derivation
 sk2 = k = (-p + r0) mod n
 sk2 = 947e08ad9df6c97ed96627d70e447f1238540da5ac2a25cf208614287592b4d2
+
 // Expected pubkey = p·G
 Expected pubkey = '03771fed6cb88aaac38b8b32104a942bf4b8f4696bc361171b3c7d06fa2ebddf06'
 Actual Pubkey = '02771fed6cb88aaac38b8b32104a942bf4b8f4696bc361171b3c7d06fa2ebddf06'
 // The pubkey is correct, as x-matches, but y-parity is wrong...
-// So we use the negated derivation:
+// So must be the negated derivation:
 Derived private key = 947e08ad9df6c97ed96627d70e447f1238540da5ac2a25cf208614287592b4d2
 
 ```
