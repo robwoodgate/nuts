@@ -43,7 +43,7 @@ This brings _"silent payments"_ to Cashu: Proofs can be locked to a well known p
 - Blinded public key: `P' = P + rᵢ·G`
 - Derived private key (standard derivation): `k = (p + rᵢ) mod n`
 - Derived private key (negated derivation): `k = (-p + rᵢ) mod n`
-- Natural Public Key: `PNat = p·G`, allows parity check to Receiver public key (`P`)
+- Natural Public Key: `pG = p·G`, allows parity check to Receiver public key (`P`)
 
 > [!NOTE]
 > The shared secret (`Zx`) is generated per receiver public key (`P`), making it the primary blinding factor. The slot index (`i`) adds additional uniqueness to ensure that if the same receiver public key appears more than once (eg: as a locking AND refund key), it is blinded uniquely. The `keyset_id` adds auxiliary uniqueness between mints and epochs.
