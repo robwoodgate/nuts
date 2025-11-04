@@ -61,7 +61,7 @@ This brings _"silent payments"_ to Cashu: Proofs can be locked to a well known p
 >    c. verify `x(P) == x(p·G)` \
 >    d. use standard derivation if `parity(P) == parity(p·G)`, otherwise use negated derivation
 > 2. **Double-derive and match:** \
->    a. derive both standard and negated candidates
+>    a. derive both standard and negated candidates \
 >    b. select the one whose public key reconstructs `P'`
 >
 > The first approach avoids an extra scalar multiplication per slot, so is recommended.
