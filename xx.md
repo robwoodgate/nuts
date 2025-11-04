@@ -41,7 +41,9 @@ This brings _"silent payments"_ to Cashu: Proofs can be locked to a well known p
   ```
   **Note:** All hash inputs must be raw byte format. (See [Determinism](#determinism-and-canonicalisation) section).
 - Blinded public key: `P' = P + rᵢ·G`
-- Derived private key: `k = (p + rᵢ) mod n`
+- Derived private key (standard derivation): `k = (p + rᵢ) mod n`
+- Derived private key (negated derivation): `k = (-p + rᵢ) mod n`
+- Natural Public Key: `PNat = p·G`, allows parity check to Receiver public key (`P`)
 
 > [!NOTE]
 > The shared secret (`Zx`) is generated per receiver public key (`P`), making it the primary blinding factor. The slot index (`i`) adds additional uniqueness to ensure that if the same receiver public key appears more than once (eg: as a locking AND refund key), it is blinded uniquely. The `keyset_id` adds auxiliary uniqueness between mints and epochs.
@@ -57,9 +59,9 @@ This brings _"silent payments"_ to Cashu: Proofs can be locked to a well known p
 >    a. compute `Rᵢ = rᵢ·G` \
 >    a. unblind `P = P' − Rᵢ` \
 >    c. verify `x(P) == x(p·G)` \
->    d. use `k = (p + rᵢ) mod n` if `parity(P) == parity(p·G)`, otherwise `k = (-p + rᵢ) mod n`
+>    d. use standard derivation if `parity(P) == parity(p·G)`, otherwise use negated derivation
 > 2. **Double-derive and match:** \
->    a. derive both candidates `k₀ = (p + rᵢ) mod n` and `k₁ = (-p + rᵢ) mod n` \
+>    a. derive both standard and negated candidates
 >    b. select the one whose public key reconstructs `P'`
 >
 > The first approach avoids an extra scalar multiplication per slot, so is recommended.
@@ -218,7 +220,8 @@ e = 1cedb9df0c6872188b560ace9e35fd55c2532d53e19ae65b46159073886482ca // as hex
 E = 02a8cda4cf448bfce9a9e46e588c06ea1780fcb94e3bbdf3277f42995d403a8b0c
 keyset_id = '009a1f293253e41e'
 Zx = x(e·P) // shared secret
-r0 = SHA-256( "Cashu_P2BK_v1" || Zx || keyset_id || 0 ) // deterministic `r`
+Zx = '40d6ba4430a6dfa915bb441579b0f4dee032307434e9957a092bbca73151df8b' // as hex
+r0 = SHA-256( "Cashu_P2BK_v1" || Zx || keyset_id || 0 ) // all hash inputs as raw bytes
 if r0 == 0 or r0 >= n:
   r0 = SHA-256( "Cashu_P2BK_v1" || Zx || keyset_id || 0 || 0xff )
   if r0 == 0 or r0 >= n:
@@ -254,7 +257,8 @@ slot = 0 (`data` field)
 keyset_id = '009a1f293253e41e'
 
 Zx = x(p·E) // shared secret
-r0 = SHA-256( "Cashu_P2BK_v1" || Zx || keyset_id || 0 ) // deterministic `r`
+Zx = '40d6ba4430a6dfa915bb441579b0f4dee032307434e9957a092bbca73151df8b' // as hex
+r0 = SHA-256( "Cashu_P2BK_v1" || Zx || keyset_id || 0 ) // all hash inputs as raw bytes
 if r0 == 0 or r0 >= n:
   r0 = SHA-256( "Cashu_P2BK_v1" || Zx || keyset_id || 0 || 0xff )
   if r0 == 0 or r0 >= n:
@@ -262,20 +266,23 @@ if r0 == 0 or r0 >= n:
 r0 = 41b5f15975f787bd5bd8d91753cbbe56d0d7aface851b1063e8011f68551862d // as hex
 
 // Standard derivation
-sk1 = (p + r0) mod n
-sk1 = eeedda054df845fbde4b8a579952fd9a240a2e9ad3c1dc791c4c6e51654698c9
+skStd = (p + r0) mod n
+skStd = eeedda054df845fbde4b8a579952fd9a240a2e9ad3c1dc791c4c6e51654698c9
 // Negated derivation
-sk2 = k = (-p + r0) mod n
-sk2 = 947e08ad9df6c97ed96627d70e447f1238540da5ac2a25cf208614287592b4d2
+skNeg = k = (-p + r0) mod n
+skNeg = 947e08ad9df6c97ed96627d70e447f1238540da5ac2a25cf208614287592b4d2
 
-// Expected pubkey = p·G
-Expected pubkey = '03771fed6cb88aaac38b8b32104a942bf4b8f4696bc361171b3c7d06fa2ebddf06'
-Actual Pubkey = '02771fed6cb88aaac38b8b32104a942bf4b8f4696bc361171b3c7d06fa2ebddf06'
-// The pubkey is correct, as x-matches, but y-parity is wrong...
-// So must be the negated derivation:
+// Check parity of Natural Pubkey (p·G) vs Sender Pubkey (P)
+pG = '03771fed6cb88aaac38b8b32104a942bf4b8f4696bc361171b3c7d06fa2ebddf06'
+P  = '02771fed6cb88aaac38b8b32104a942bf4b8f4696bc361171b3c7d06fa2ebddf06'
+
+// Parity is mismatched to P (is Schnorr even-Y lifted), so use negated derivation
 Derived private key = 947e08ad9df6c97ed96627d70e447f1238540da5ac2a25cf208614287592b4d2
-
 ```
+
+> [!NOTE]
+> For more detailed examples of slot blinding, see the [test vectors][tests].
 
 [11]: 11.md
 [18]: 18.md
+[tests]: tests/xx-tests.md
