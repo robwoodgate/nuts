@@ -32,6 +32,7 @@ Zx: "40d6ba4430a6dfa915bb441579b0f4dee032307434e9957a092bbca73151df8b" # hex enc
 The following are valid ECDH blinding tweaks by locking slot for receiver pubkey (P).
 
 ```shell
+r0: "41b5f15975f787bd5bd8d91753cbbe56d0d7aface851b1063e8011f68551862d" # scalar as hex padded 64
 r1: "c4d68c79b8676841f767bcd53437af3f43d51b205f351d5cdfe5cb866ec41494" # scalar as hex padded 64
 r2: "04ecf53095882f28965f267e46d2c555f15bcd74c3a84f42cf0de8ebfb712c7c" # scalar as hex padded 64
 r3: "4163bc31b3087901b8b28249213b0ecc447cee3ea1f0c04e4dd5934e0c3f78ad" # scalar as hex padded 64
