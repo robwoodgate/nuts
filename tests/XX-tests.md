@@ -27,9 +27,9 @@ The unique shared secret between sender and receiver is: `x(e·p·G) = x(e·P) =
 Zx: "40d6ba4430a6dfa915bb441579b0f4dee032307434e9957a092bbca73151df8b" # hex encoded bytes
 ```
 
-### ECDH Blinding Tweaks (r)
+### Deterministic blinding scalar (r)
 
-The following are valid ECDH blinding tweaks by locking slot for receiver pubkey (P).
+The following are valid ECDH blinding scalars for receiver pubkey (P), derived by locking slot.
 
 ```shell
 r0: "41b5f15975f787bd5bd8d91753cbbe56d0d7aface851b1063e8011f68551862d" # scalar as hex padded 64
@@ -45,9 +45,9 @@ r9: "cf4e69842833e0dab8a7302933d648fee98de80284af2d7ead71b420a8f0ebde" # scalar 
 r10 "3638eae8a9889bbd96769637526010b34cd1e121805eaaaaa0602405529ca92f" # scalar as hex padded 64
 ```
 
-### Blinded Public Keys
+### Blinded Public Keys (P')
 
-The following are valid blinded public keys for the receiver pubkey (P), derived by locking slot.
+The following are valid blinded public keys for receiver pubkey (P), derived by locking slot.
 
 ```shell
 0: "03f221b62aa21ee45982d14505de2b582716ae95c265168f586dc547f0ea8f135f" # hex encoded public key
