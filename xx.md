@@ -29,8 +29,10 @@ This brings _"silent payments"_ to Cashu: Proofs can be locked to a well known p
 - Receiver secret key: `p`
 - Sender ephemeral keypair: `(e, E = e·G)` generated **per proof**
 - Shared secret: `Zx = x(e·P) or x(p·E)` (32-byte BE x-coordinate) **per receiver key**
-- Keyset identifier: `keyset_id` The hex keyset id, exactly as supplied by the mint. `keyset_id_bytes` is the `keyset_id` hex-decoded to raw bytes
-- Slot index: `i` (0–10). Represents the 11 pubkey limit in a P2PK proof, in the order: `[data, ...pubkeys, ...refund]`. `i_byte` is the single unsigned byte representation
+- Keyset identifier: `keyset_id` The hex keyset id, exactly as supplied by the mint. \
+  `keyset_id_bytes` is the `keyset_id` hex-decoded to raw bytes
+- Slot index: `i` (0–10). Represents the 11 pubkey limit in a P2PK proof, in the order: `[data, ...pubkeys, ...refund]` \
+  `i_byte` is the single unsigned byte representation of `i`: (`0x00` to `0x0A`)
 - Domain Separation Tag: `b"Cashu_P2BK_v1"`. ASCII byte sequence of the literal string
 - Deterministic blinding scalar, obtained by either:
   ```
