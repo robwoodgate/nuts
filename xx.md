@@ -94,7 +94,7 @@ Each proof adds a single new metadata field:
 2. For **each receiver key** `P`, compute: \
    a. Unique shared secret for this key: `Zx = x(e·P)` \
    b. Slot index `i` in `[data, ...pubkeys, ...refund]` \
-   c. Blinding scalar: `rᵢ = SHA-256(b"Cashu_P2BK_v1" || Zx || keyset_id_bytes || i_byte)`
+   c. Blinding scalar: `rᵢ = SHA-256(b"Cashu_P2BK_v1" || Zx || keyset_id_bytes || i_byte)` \
    d. Blinded Public Key: `P' = P + rᵢ·G`
 3. Build the canonical P2PK secret with the blinded `P'` keys in their slots.
 4. Interact with the mint normally; the mint never learns `P` or `rᵢ`
@@ -111,7 +111,7 @@ Each proof adds a single new metadata field:
 1. Read `E` from `proof.p2pk_e`, `keyset_id` from `proof.id`, and the key slot order index `i` from `[data, ...pubkeys, ...refund]`
 2. Calculate your unique shared secret: `Zx = x(p·E)`
 3. For each slot `i`, compute: \
-   a. Blinding scalar: `rᵢ = SHA-256(b"Cashu_P2BK_v1" || Zx || keyset_id_bytes || i_byte)`
+   a. Blinding scalar: `rᵢ = SHA-256(b"Cashu_P2BK_v1" || Zx || keyset_id_bytes || i_byte)` \
    b. Compute `Rᵢ = rᵢ·G`, and unblind `P = P' − Rᵢ` \
    c. Verify `P` is on curve, not infinity, and that `x(P) == x(p·G)`. If it does not match, this `P'` is not for this private key, skip it. \
    d. Resolve the BIP-340 sign and derive the secret key: either \
