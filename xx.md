@@ -28,16 +28,17 @@ This brings _"silent payments"_ to Cashu: Proofs can be locked to a well known p
 - Receiver public key: `P`
 - Receiver secret key: `p`
 - Sender ephemeral keypair: `(e, E = e·G)` generated **per proof**
-- Shared secret: `Zx = x(e·P) or x(p·E)` (32-byte x-coordinate) **per receiver key**
-- Keyset identifier: `keyset_id` (mint-supplied), hex-decoded to raw bytes before hashing
-- Slot index: `i` (0–10). Represents the 11 pubkey limit in a P2PK proof, in the order: `[data, ...pubkeys, ...refund]`
+- Shared secret: `Zx = x(e·P) or x(p·E)` (32-byte BE x-coordinate) **per receiver key**
+- Keyset identifier: `keyset_id` The hex keyset id, exactly as supplied by the mint. `keyset_id_bytes` is the `keyset_id` hex-decoded to raw bytes
+- Slot index: `i` (0–10). Represents the 11 pubkey limit in a P2PK proof, in the order: `[data, ...pubkeys, ...refund]`. `i_byte` is the single unsigned byte representation
+- Domain Separation Tag: `b"Cashu_P2BK_v1"`. ASCII byte sequence of the literal string
 - Deterministic blinding scalar, obtained by either:
   ```
-  rᵢ = SHA-256( "Cashu_P2BK_v1" || Zx || keyset_id || i )
+  rᵢ = SHA-256( b"Cashu_P2BK_v1" || Zx || keyset_id_bytes || i_byte)
   ```
   or if the first calculation is out of range (`rᵢ = 0` or `rᵢ >= n`):
   ```
-  rᵢ = SHA-256( "Cashu_P2BK_v1" || Zx || keyset_id || i || 0xff )
+  rᵢ = SHA-256( b"Cashu_P2BK_v1" || Zx || keyset_id_bytes || i_byte || 0xff )
   ```
   **Note:** All hash inputs must be raw byte format. (See [Determinism](#determinism-and-canonicalisation) section).
 - Blinded public key: `P' = P + rᵢ·G`
@@ -57,7 +58,7 @@ This brings _"silent payments"_ to Cashu: Proofs can be locked to a well known p
 >
 > 1. **Unblind, then select by parity (RECOMMENDED):** \
 >    a. compute `Rᵢ = rᵢ·G` \
->    a. unblind `P = P' − Rᵢ` \
+>    b. unblind `P = P' − Rᵢ` \
 >    c. verify `x(P) == x(p·G)` \
 >    d. use standard derivation if `parity(P) == parity(p·G)`, otherwise use negated derivation
 > 2. **Double-derive and match:** \
@@ -83,6 +84,7 @@ Each proof adds a single new metadata field:
 - `p2pk_e` contains the sender's ephemeral pubkey (`E`) used for blinding
 - All pubkeys inside the `"P2PK"` secret are the blinded forms `P'`
 - The mint sees standard P2PK data and remains unaware of the blinding
+- For Token V4 encoding, the `p2pk_e` field is named `pe`, and `E` is encoded as a 33 byte CBOR bstr
 
 ## Sender Workflow
 
@@ -90,7 +92,7 @@ Each proof adds a single new metadata field:
 2. For **each receiver key** `P`, compute: \
    a. Unique shared secret for this key: `Zx = x(e·P)` \
    b. Slot index `i` in `[data, ...pubkeys, ...refund]` \
-   c. Blinding scalar: `rᵢ = H("Cashu_P2BK_v1" || Zx || keyset_id || i)`\
+   c. Blinding scalar: `rᵢ = SHA-256(b"Cashu_P2BK_v1" || Zx || keyset_id_bytes || i_byte)`is a single unsigned byte from 0 to 10 inclusive (`0x00` to `0x0A`).
    d. Blinded Public Key: `P' = P + rᵢ·G`
 3. Build the canonical P2PK secret with the blinded `P'` keys in their slots.
 4. Interact with the mint normally; the mint never learns `P` or `rᵢ`
@@ -99,15 +101,15 @@ Each proof adds a single new metadata field:
 > [!IMPORTANT]
 > Use a fresh ephemeral keypair (`e` / `E`) for each new output, so that every proof has
 > unique blinded keys and a unique `E` in the `Proof.p2pk_e` field.
-> In the case of `SIG_ALL` proofs, the **SAME** ephemeral keypair **MUST** be used for all
-> outputs, as all proofs must have the SAME locking/refund keys.
+> In the case of `SIG_ALL`, the **SAME** ephemeral keypair **MUST** be used for all
+> outputs, as all `SIG_ALL` proof secrets must have IDENTICAL `data` and `tags` fields.
 
 ## Receiver Workflow
 
 1. Read `E` from `proof.p2pk_e`, `keyset_id` from `proof.id`, and the key slot order index `i` from `[data, ...pubkeys, ...refund]`
 2. Calculate your unique shared secret: `Zx = x(p·E)`
 3. For each slot `i`, compute: \
-   a. Blinding scalar: `rᵢ = H("Cashu_P2BK_v1" || Zx || keyset_id || i)` \
+   a. Blinding scalar: `rᵢ = SHA-256(b"Cashu_P2BK_v1" || Zx || keyset_id_bytes || i_byte)`is a single unsigned byte from 0 to 10 inclusive (`0x00` to `0x0A`).
    b. Compute `Rᵢ = rᵢ·G`, and unblind `P = P' − Rᵢ` \
    c. Verify `P` is on curve, not infinity, and that `x(P) == x(p·G)`. If it does not match, this `P'` is not for this private key, skip it. \
    d. Resolve the BIP-340 sign and derive the secret key: either \
@@ -184,8 +186,8 @@ In this example:
 
 - Hash function: SHA-256.
 - Concatenate all hash inputs as raw bytes in the order shown.
-- `keyset_id` The ASCII hex string from the mint MUST be hex-decoded to raw bytes.
-- `i` is a single unsigned byte (0–10).
+- `keyset_id_bytes` is the full Keyset ID from the mint, **hex-decoded** to raw bytes.
+- `i_byte` is a single unsigned byte from 0 to 10 inclusive (`0x00` to `0x0A`).
 - If `rᵢ = 0` or `rᵢ >= n`, retry once with an extra `0xff` byte appended to the hash input; abort if still out of range.
 - All receiver keys **MUST** be in compressed SEC1 format (33 bytes) before ECDH and blinding. The sender **MUST add an '02' prefix** to BIP-340 x only pubkeys (eg Nostr).
 
@@ -218,12 +220,12 @@ She generates an ephemeral secret, `e`, with corresponding pubkey `E` and blinds
 ```
 e = 1cedb9df0c6872188b560ace9e35fd55c2532d53e19ae65b46159073886482ca // as hex
 E = 02a8cda4cf448bfce9a9e46e588c06ea1780fcb94e3bbdf3277f42995d403a8b0c
-keyset_id = '009a1f293253e41e'
-Zx = x(e·P) // shared secret
+keyset_id_bytes = hex_to_bytes('009a1f293253e41e')
+Zx = x(e·P) // shared secret as 32 bytes BE
 Zx = '40d6ba4430a6dfa915bb441579b0f4dee032307434e9957a092bbca73151df8b' // as hex
-r0 = SHA-256( "Cashu_P2BK_v1" || Zx || keyset_id || 0 ) // all hash inputs as raw bytes
+r0 = SHA-256( b"Cashu_P2BK_v1" || Zx || keyset_id_bytes || 0x00 ) // all hash inputs as raw bytes
 if r0 == 0 or r0 >= n:
-  r0 = SHA-256( "Cashu_P2BK_v1" || Zx || keyset_id || 0 || 0xff )
+  r0 = SHA-256( b"Cashu_P2BK_v1" || Zx || keyset_id_bytes || 0x00 || 0xff )
   if r0 == 0 or r0 >= n:
     abort
 r0 = 41b5f15975f787bd5bd8d91753cbbe56d0d7aface851b1063e8011f68551862d // as hex
@@ -254,13 +256,13 @@ Carol receives the Proof and can derive the blinded signing key `k` as follows:
 E = proof.p2pk_e
 p = ad37e8abd800be3e8272b14045873f4353327eedeb702b72ddcc5c5adff5129c (Carol's private key)
 slot = 0 (`data` field)
-keyset_id = '009a1f293253e41e'
+keyset_id_bytes = hex_to_bytes('009a1f293253e41e')
 
 Zx = x(p·E) // shared secret
 Zx = '40d6ba4430a6dfa915bb441579b0f4dee032307434e9957a092bbca73151df8b' // as hex
-r0 = SHA-256( "Cashu_P2BK_v1" || Zx || keyset_id || 0 ) // all hash inputs as raw bytes
+r0 = SHA-256( b"Cashu_P2BK_v1" || Zx || keyset_id_bytes || 0x00 ) // all hash inputs as raw bytes
 if r0 == 0 or r0 >= n:
-  r0 = SHA-256( "Cashu_P2BK_v1" || Zx || keyset_id || 0 || 0xff )
+  r0 = SHA-256( b"Cashu_P2BK_v1" || Zx || keyset_id_bytes || 0x00 || 0xff )
   if r0 == 0 or r0 >= n:
     abort
 r0 = 41b5f15975f787bd5bd8d91753cbbe56d0d7aface851b1063e8011f68551862d // as hex
@@ -272,7 +274,7 @@ skStd = eeedda054df845fbde4b8a579952fd9a240a2e9ad3c1dc791c4c6e51654698c9
 skNeg = k = (-p + r0) mod n
 skNeg = 947e08ad9df6c97ed96627d70e447f1238540da5ac2a25cf208614287592b4d2
 
-// Check parity of Natural Pubkey (p·G) vs Sender Pubkey (P)
+// Check parity of Natural Pubkey (p·G) vs Receiver Pubkey (P)
 pG = '03771fed6cb88aaac38b8b32104a942bf4b8f4696bc361171b3c7d06fa2ebddf06'
 P  = '02771fed6cb88aaac38b8b32104a942bf4b8f4696bc361171b3c7d06fa2ebddf06'
 
