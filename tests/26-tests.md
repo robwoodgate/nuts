@@ -19,6 +19,25 @@ As per NUT-11, there are up to 11 locking 'slots' in the order: `[data, ...pubke
 
 Slot 0 is the `data` tag. Slots 1-10 can be any combination of `pubkeys` and `refund` keys.
 
+### Example P2BK proof
+
+The following P2BK proof shows the receiver's public key (P) blinded in the `data` tag (slot `0`), and the ephemeral public key (E) in the `p2pk_e`metadata field.
+
+```json
+{
+  "amount": 64,
+  "C": "0381855ddcc434a9a90b3564f29ef78e7271f8544d0056763b418b00e88525c0ff",
+  "id": "009a1f293253e41e",
+  "secret": "[\"P2PK\",{\"nonce\":\"d4a17a88f5d0c09001f7b453c42c1f9d5a87363b1f6637a5a83fc31a6a3b7266\",\"data\":\"03f221b62aa21ee45982d14505de2b582716ae95c265168f586dc547f0ea8f135f\",\"tags\":[]}]",
+  "dleq": {
+    "s": "6178978456c42eee8eefb50830fc3146be27b05619f04e3490dc596005f0cc78",
+    "e": "23f2190b18bfd043d3a526103e15f4a938d646a6bf93b017e2bb7c85e1540b32",
+    "r": "d26a55aa39ca50957fdaf54036b01053b0de42048b96a6fb2a167e03f00d0a0f"
+  },
+  "p2pk_e": "02a8cda4cf448bfce9a9e46e588c06ea1780fcb94e3bbdf3277f42995d403a8b0c"
+}
+```
+
 ### Shared Secret (Zx)
 
 The unique shared secret between sender and receiver is: `x(e·p·G) = x(e·P) = x(p·E)`:
@@ -100,7 +119,7 @@ The following are valid derived secret keys for the receiver secret key (p), by 
 To decide which derivation to use, receiver calculates their natural Pubkey and compares the parity to their actual pubkey. If the parity matches, use standard derivation, otherwise negated.
 
 ```shell
-# Natural Pubkey: pG = p·G
+# Natural Pubkey: pG
 pG: "03771fed6cb88aaac38b8b32104a942bf4b8f4696bc361171b3c7d06fa2ebddf06" # hex encoded public key
 
 # Actual Pubkey:
