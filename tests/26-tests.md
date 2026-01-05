@@ -15,7 +15,7 @@ P: "02771fed6cb88aaac38b8b32104a942bf4b8f4696bc361171b3c7d06fa2ebddf06" # hex en
 kid: "009a1f293253e41e" # hex keyset ID from Mint
 ```
 
-As per NUT-11, there are up to 11 locking 'slots' in the order: `[data, ...pubkeys, ...refund]`.
+Per NUT-11, there are up to 11 locking 'slots' in the order: `[data, ...pubkeys, ...refund]`.
 
 Slot 0 is the `data` tag. Slots 1-10 can be any combination of `pubkeys` and `refund` keys.
 
